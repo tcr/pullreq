@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<title>Pullreq</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+</head>
+<body>
+
+	<h1>Pullreq</h1>
+
+	<pre id="names" style="float: left; width: 200px; font-family: Gill Sans"></pre>
+	<pre id="text" style="margin-left: 210px">Loading page...</pre>
+	<div style="margin-left: 210px"><form id="form"><input id="msg"><button>Say</button></form></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+
+var socket = io.connect('http://localhost');
+socket.on('error', function (message) {
+	console.log('ERROR', message);
+});
+
+socket.on('message', function (from, to, message) {
+	console.log(from, to, message)
+
+	$('#text').append(document.createTextNode('\n<' + from + '> ' + message));
+})
+
+socket.on('join', function (channel, nick, message) {
+	console.log('join', channel, nick, message)
+	$('#text').append(document.createTextNode('\nJoined ' + channel + '.'));
+})
+
+socket.on('names', function (channel, nicks) {
+	console.log('Names', channel, nicks)
+
+	var str = '';
+	for (var name in nicks) {
+		str += name + '\n';
+	}
+	$('#names').text(str);
+})
+
+$('#form').on('submit', function (e) {
+	var message = $('#msg').val();
+	socket.emit('say', '#gameclosure', message);
+	$('#text').append(document.createTextNode('\n[you] ' + message));
+	$('#msg').val('');
+	return false;
+})
+
+</script>
+
+</body>
+</html>

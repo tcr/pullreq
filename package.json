@@ -1,0 +1,15 @@
+{
+  "name": "pullreq",
+  "version": "0.0.0",
+  "description": "Social coding.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/timcameronryan/pullreq.git"
+  },
+  "author": "Tim Cameron Ryan",
+  "license": "MIT"
+}
