@@ -4,51 +4,146 @@
 <head>
 	<title>Pullreq</title>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<style>
+body { font-family: Gill Sans; }
+body, html {
+    overflow:hidden;}
+body, html, table { margin: 0; padding: 0; 
+    height:100%;
+    width: 100%;}
+table { border: none; border-collapse: collapse;
+}
+#names-cell, #text-cell { vertical-align: top; }
+#text-cell {
+    -webkit-box-sizing:border-box;
+    -moz-box-sizing:border-box;
+    -ms-box-sizing:border-box;
+    box-sizing:border-box;
+    height: 100%; 
+}
+#text {
+	float: left;
+    overflow: auto;
+    height:100%;
+    width: 100%;
+}
+
+#entry, #header { height: 10px; }
+#names-cell { width: 200px;  background: #eee; }
+#header { background: #abc; }
+#header h1 { margin: 0; padding-left: 10px;}
+#msg { font-size: 1.3em; font-family: monospace; padding: 4px 10px; }
+#entry { height: 0px; background: #666; }
+#names, #text { overflow: auto; margin: 0; }
+</style>
 </head>
 <body>
 
-	<h1>Pullreq</h1>
+<table>
+	<tr><td colspan="2" id="header">
+	<h1>Pullreq
+		<button id="connect" onclick="connect()">[reconnect]</button>
+		<button id="disconnect" onclick="disconnect()">[disconnect]</button>
+		<button id="disconnect" onclick="socket.emit('send', 'names', '#gameclosure')">[names]</button>
+	</h1>
+	</td></tr>
 
-	<pre id="names" style="float: left; width: 200px; font-family: Gill Sans"></pre>
-	<pre id="text" style="margin-left: 210px">Loading page...</pre>
-	<div style="margin-left: 210px"><form id="form"><input id="msg"><button>Say</button></form></div>
+<tr style="overflow:auto"><td id="names-cell"><pre id="names"></pre></td>
+
+<td>
+
+<table>
+	<tr>
+<td id="text-cell" style="overflow:auto">
+	<pre id="text" >Loading page...
+</pre></td>
+</tr>
+
+<tr><td id="entry"><form id="form"><input id="msg"><button>Say</button></form></td></tr></table>
+
+</td></tr></table>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 
+function addMessage () {
+	var args = [].slice.call(arguments);
+	var message = args.join(' ');
+	$('#text').append(document.createTextNode(message + '\n'));
+}
+
+function connect() {
+	socket.socket.reconnect();
+	socket.emit('initialize', {restore: true});
+}
+
+function disconnect() {
+	addMessage('INTERRUPTING CONNECTION.');
+	socket && socket.disconnect();
+}
+
 var socket = io.connect('http://localhost');
+
+var handlers = {
+	registered: function () {
+		socket.emit('join', '#gameclosure');
+	},
+
+	message: function (from, to, message) {
+		console.log(from, to, message);
+		addMessage('<' + from + '>', message);
+	},
+
+	join: function (channel, nick, message) {
+		console.log('join', channel, nick, message)
+		addMessage(nick, 'joined', channel, '.');
+	},
+
+	names: function (channel, nicks) {
+		console.log('Names', channel, nicks)
+		addMessage('Entered room.');
+
+		var str = '';
+		for (var name in nicks) {
+			str += name + '\n';
+		}
+		$('#names').text(str);
+
+	},
+
+	error: function (message) {
+		console.log('ERROR', message);
+	}
+};
+
 socket.on('error', function (message) {
 	console.log('ERROR', message);
 });
 
-socket.on('message', function (from, to, message) {
-	console.log(from, to, message)
-
-	$('#text').append(document.createTextNode('\n<' + from + '> ' + message));
+socket.on('command', function (message, ack) {
+	console.log(message);
+	handlers[message.type] && handlers[message.type].apply(null, message.args);
+	ack(true);
 })
 
-socket.on('join', function (channel, nick, message) {
-	console.log('join', channel, nick, message)
-	$('#text').append(document.createTextNode('\nJoined ' + channel + '.'));
-})
-
-socket.on('names', function (channel, nicks) {
-	console.log('Names', channel, nicks)
-
-	var str = '';
-	for (var name in nicks) {
-		str += name + '\n';
-	}
-	$('#names').text(str);
-})
 
 $('#form').on('submit', function (e) {
 	var message = $('#msg').val();
 	socket.emit('say', '#gameclosure', message);
-	$('#text').append(document.createTextNode('\n[you] ' + message));
+	addMessage('[you]', message);
 	$('#msg').val('');
 	return false;
 })
+
+socket.emit('initialize', {
+	username: 'parallel-avatar',
+	restore: false
+});
+
+// Get names on first load.
+socket.emit('send', 'names', '#gameclosure');
+
+$('#msg').focus();
 
 </script>
 
