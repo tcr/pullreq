@@ -195,5 +195,6 @@ io.sockets.on('connection', function (socket) {
  * Launch.
  */
 
-console.log('Launch app at http://localhost:3000/');
-server.listen(3000);
+var port = process.env.PORT || 3000;
+console.log('Launch app at http://localhost:' + port + '/');
+server.listen(port);

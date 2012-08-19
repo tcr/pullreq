@@ -1,15 +1,27 @@
 {
-  "name": "pullreq",
-  "version": "0.0.0",
+  "version": "0.0.0-3",
   "description": "Social coding.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "server.js"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/timcameronryan/pullreq.git"
   },
   "author": "Tim Cameron Ryan",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "irc": "~0.3.4",
+    "socket.io": "~0.9.10",
+    "connect": "~2.4.3",
+    "cookie": "~0.0.4",
+    "express": "~3.0.0rc2"
+  },
+  "engines": {
+    "node": "0.8.x"
+  },
+  "name": "pullreq",
+  "subdomain": "pullreq"
 }

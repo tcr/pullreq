@@ -5,63 +5,155 @@
 	<title>Pullreq</title>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
 <style>
+
 body { font-family: Gill Sans; }
 body, html {
-    overflow:hidden;}
-body, html, table { margin: 0; padding: 0; 
-    height:100%;
-    width: 100%;}
-table { border: none; border-collapse: collapse;
-}
-#names-cell, #text-cell { vertical-align: top; }
-#text-cell {
-    -webkit-box-sizing:border-box;
-    -moz-box-sizing:border-box;
-    -ms-box-sizing:border-box;
-    box-sizing:border-box;
-    height: 100%; 
-}
-#text {
-	float: left;
-    overflow: auto;
-    height:100%;
-    width: 100%;
+	margin: 0; padding: 0; 
+	height:100%;
+	width: 100%;
 }
 
-#entry, #header { height: 10px; }
-#names-cell { width: 200px;  background: #eee; }
-#header { background: #abc; }
-#header h1 { margin: 0; padding-left: 10px;}
-#msg { font-size: 1.3em; font-family: monospace; padding: 4px 10px; }
-#entry { height: 0px; background: #666; }
-#names, #text { overflow: auto; margin: 0; }
+/* flexbox */
+
+.expand {
+	height: 100%; width: 100%;
+	padding: 0; margin: 0;
+	box-sizing: border-box;
+}
+
+.flexbox,
+.flexbox > * {
+	position: relative;
+	z-index: 255;
+	box-sizing: border-box;
+	overflow: auto;
+	margin: 0;
+}
+
+.flexbox > .flex {
+	border-top: 0px solid transparent;
+	border-left: 0px solid transparent;
+}
+
+.flexbox-right > * {
+	float: left;
+	height: 100%;
+}
+
+/* other */
+
+#header {
+	background: #abc; padding-left: 10px;
+	line-height: 50px;
+}
+#header button {
+	vertical-align: middle;
+}
+#names {
+	 background: #ccc;
+}
+#text {
+	background: #def;
+}
+#msg {
+	font-size: 1.3em; font-family: monospace; padding: 4px 10px;
+}
+#entry {
+	background: #666;
+	line-height: 50px;
+}
+#entry input, #entry button {
+	vertical-align: middle;
+}
+
+button {
+	font-size: 16px;
+	padding: 4px 6px;
+}
+
 </style>
 </head>
 <body>
 
-<table>
-	<tr><td colspan="2" id="header">
-	<h1>Pullreq
-		<button id="connect" onclick="connect()">[reconnect]</button>
-		<button id="disconnect" onclick="disconnect()">[disconnect]</button>
-		<button id="disconnect" onclick="socket.emit('send', 'names', '#gameclosure')">[names]</button>
-	</h1>
-	</td></tr>
+<div id="container" class="expand">
 
-<tr style="overflow:auto"><td id="names-cell"><pre id="names"></pre></td>
+<h1 id="header">
+	<span>Pullreq Chat</span>
+	<button id="connect" onclick="connect()">[reconnect]</button>
+	<button id="disconnect" onclick="disconnect()">[disconnect]</button>
+	<button id="disconnect" onclick="socket.emit('send', 'names', '#gameclosure')">[names]</button>
+</h1>
 
-<td>
+<div id="middle">
+<pre id="names"></pre>
+<pre id="text">Loading page...</pre>
+</div>
 
-<table>
-	<tr>
-<td id="text-cell" style="overflow:auto">
-	<pre id="text" >Loading page...
-</pre></td>
-</tr>
+<div id="entry">
+<form id="form"><input id="msg"><button>Say</button></form>
+</div>
 
-<tr><td id="entry"><form id="form"><input id="msg"><button>Say</button></form></td></tr></table>
+</div>
 
-</td></tr></table>
+<script></script>
+
+<script>
+
+function layout (el, isRight) {
+	if (!(this instanceof layout)) {
+		return new layout(el, isRight);
+	}
+	this.el = el;
+	this.isRight = isRight;
+	this.el.className += ' flexbox' + (isRight ? ' flexbox-right' : '')
+	this.children = [];
+	this.flexCount = 0;
+	this.fixedCount = 0;
+}
+
+layout.prototype.fixed = function (px, txt) {
+	this.children.push([px, txt]);
+	this.fixedCount += px;
+	return this;
+};
+	
+layout.prototype.flex = function (txt) {
+	this.children.push([null, txt]);
+	this.flexCount++;
+	return this;
+};
+
+layout.prototype.render = function () {
+	this.children.forEach(function (child, i) {
+		var div = child[1];
+
+		div.style.margin = 0;
+		if (child[0]) {
+			div.style[this.isRight ? 'width' : 'height'] = child[0] + 'px';
+		} else {
+			div.className += ' flex';
+			div.style.zIndex = 255 - Number(i);
+			div.style[this.isRight ? 'width' : 'height'] = (100 / this.flexCount) + '%';
+			div.style[this.isRight ? 'marginLeft' : 'marginTop'] = '-' + (this.fixedCount / this.flexCount) + 'px';
+			div.style[this.isRight ? 'borderLeftWidth' : 'borderTopWidth'] = (this.fixedCount / this.flexCount) + 'px';
+		}
+	}.bind(this));
+};
+
+/* test layout */
+
+layout(document.getElementById('container'))
+	.fixed(50, document.getElementById('header'))
+	.flex(document.getElementById('middle'))
+	.fixed(50, document.getElementById('entry'))
+	.render();
+
+layout(document.getElementById('middle'), true)
+	.fixed(200, document.getElementById('names'))
+	.flex(document.getElementById('text'))
+	.render();
+
+</script>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -72,76 +164,82 @@ function addMessage () {
 	$('#text').append(document.createTextNode(message + '\n'));
 }
 
-function connect() {
+var socket;
+
+function connect () {
 	socket.socket.reconnect();
 	socket.emit('initialize', {restore: true});
 }
 
-function disconnect() {
+function disconnect () {
 	addMessage('INTERRUPTING CONNECTION.');
 	socket && socket.disconnect();
 }
 
-var socket = io.connect('http://localhost');
+function launch () {
+	socket = io.connect('http://' + window.location.host);
 
-var handlers = {
-	registered: function () {
-		socket.emit('join', '#gameclosure');
-	},
+	var handlers = {
+		registered: function () {
+			socket.emit('join', '#gameclosure');
+		},
 
-	message: function (from, to, message) {
-		console.log(from, to, message);
-		addMessage('<' + from + '>', message);
-	},
+		message: function (from, to, message) {
+			console.log(from, to, message);
+			addMessage('<' + from + '>', message);
+		},
 
-	join: function (channel, nick, message) {
-		console.log('join', channel, nick, message)
-		addMessage(nick, 'joined', channel, '.');
-	},
+		join: function (channel, nick, message) {
+			console.log('join', channel, nick, message)
+			addMessage(nick, 'joined', channel, '.');
+		},
 
-	names: function (channel, nicks) {
-		console.log('Names', channel, nicks)
-		addMessage('Entered room.');
+		names: function (channel, nicks) {
+			console.log('Names', channel, nicks)
+			addMessage('Entered room.');
 
-		var str = '';
-		for (var name in nicks) {
-			str += name + '\n';
+			var str = '';
+			for (var name in nicks) {
+				str += name + '\n';
+			}
+			$('#names').text(str);
+
+		},
+
+		error: function (message) {
+			console.log('ERROR', message);
 		}
-		$('#names').text(str);
+	};
 
-	},
-
-	error: function (message) {
+	socket.on('error', function (message) {
 		console.log('ERROR', message);
-	}
-};
+	});
 
-socket.on('error', function (message) {
-	console.log('ERROR', message);
-});
-
-socket.on('command', function (message, ack) {
-	console.log(message);
-	handlers[message.type] && handlers[message.type].apply(null, message.args);
-	ack(true);
-})
+	socket.on('command', function (message, ack) {
+		console.log('COMMAND:', message.type, message.args);
+		handlers[message.type] && handlers[message.type].apply(null, message.args);
+		ack(true);
+	})
 
 
-$('#form').on('submit', function (e) {
-	var message = $('#msg').val();
-	socket.emit('say', '#gameclosure', message);
-	addMessage('[you]', message);
-	$('#msg').val('');
-	return false;
-})
+	$('#form').on('submit', function (e) {
+		var message = $('#msg').val();
+		socket.emit('say', '#gameclosure', message);
+		addMessage('[you]', message);
+		$('#msg').val('');
+		return false;
+	})
 
-socket.emit('initialize', {
-	username: 'parallel-avatar',
-	restore: false
-});
+	socket.emit('initialize', {
+		username: 'parallel-avatar',
+		restore: false
+	});
 
-// Get names on first load.
-socket.emit('send', 'names', '#gameclosure');
+	// Get names on first load.
+	socket.emit('send', 'names', '#gameclosure')
+}
+
+//launch();
 
 $('#msg').focus();
 
